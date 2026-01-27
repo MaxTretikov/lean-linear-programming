@@ -17,8 +17,8 @@ This file re-exports all LP-related definitions and theorems.
 * `general_to_standard_form_equivalence` - Full equivalence theorem
 -/
 
-import LeanLinearProgramming.Defs
-import LeanLinearProgramming.MinToMax
-import LeanLinearProgramming.SwapInequalities
-import LeanLinearProgramming.NonnegConstraint
-import LeanLinearProgramming.Equivalence
+import LinearProgramming.Defs
+import LinearProgramming.MinToMax
+import LinearProgramming.SwapInequalities
+import LinearProgramming.NonnegConstraint
+import LinearProgramming.Equivalence

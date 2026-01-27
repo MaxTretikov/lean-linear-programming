@@ -9,7 +9,7 @@ This file combines two transformation steps:
 - Step 3: Converting = constraints to ≤ constraints (a^T y = β ↔ (a^T y ≤ β) ∧ ((-a)^T y ≤ -β))
 -/
 
-import LeanLinearProgramming.Defs
+import LinearProgramming.Defs
 
 noncomputable section
 

@@ -9,7 +9,7 @@ Transformations for handling sign constraints on variables:
 - Free variables y are decomposed as y = x⁺ - x⁻ where x⁺, x⁻ ≥ 0
 -/
 
-import LeanLinearProgramming.Defs
+import LinearProgramming.Defs
 
 noncomputable section
 

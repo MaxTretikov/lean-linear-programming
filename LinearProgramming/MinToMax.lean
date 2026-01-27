@@ -7,7 +7,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Converting minimization LPs to maximization by negating the objective.
 -/
 
-import LeanLinearProgramming.Defs
+import LinearProgramming.Defs
 
 noncomputable section
 

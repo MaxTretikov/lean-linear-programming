@@ -198,4 +198,72 @@ lemma appendVecs_apply {m₁ m₂ : ℕ} (b₁ : Vec m₁) (b₂ : Vec m₂) (i 
 def countFree (n : ℕ) (σ : Fin n → SignConstraint) : ℕ :=
   (Finset.univ.filter (fun j => σ j = .free)).card
 
+/-! ## Standard Form (Equality Form)
+
+The canonical form for linear programs:
+    Find y such that By = c and y ≥ 0
+
+This is the "equality standard form" (ESF). Any LP can be converted to this form.
+-/
+
+/-- A linear program in standard form (equality form):
+    Find y such that By = c and y ≥ 0 -/
+structure StandardForm (m p : ℕ) where
+  /-- Constraint matrix -/
+  B : Mat m p
+  /-- Right-hand side -/
+  c : Vec m
+
+namespace StandardForm
+
+variable {m p : ℕ}
+
+/-- A vector y is feasible if By = c and y ≥ 0 -/
+def feasible (S : StandardForm m p) (y : Vec p) : Prop :=
+  S.B.mulVec y = S.c ∧ y ∈ nonnegOrthant p
+
+/-- The LP is feasible if there exists a feasible solution -/
+def isFeasible (S : StandardForm m p) : Prop := ∃ y, S.feasible y
+
+end StandardForm
+
+/-! ## Inequality Form (Intermediate)
+
+The inequality form: Find x such that Ax ≤ b
+
+This is an intermediate form. It can be converted to standard form by adding
+slack variables: define s = b - Ax, then Ax + s = b with s ≥ 0.
+
+Note: This form does NOT require x ≥ 0. For the full conversion to standard form,
+we also decompose each free variable x as x = x⁺ - x⁻ where x⁺, x⁻ ≥ 0.
+-/
+
+/-- A linear program in inequality form (intermediate):
+    Find x such that Ax ≤ b -/
+structure InequalityForm (m n : ℕ) where
+  /-- Constraint matrix -/
+  A : Mat m n
+  /-- Right-hand side -/
+  b : Vec m
+
+namespace InequalityForm
+
+variable {m n : ℕ}
+
+/-- A vector x is feasible if Ax ≤ b componentwise -/
+def feasible (P : InequalityForm m n) (x : Vec n) : Prop :=
+  ∀ i : Fin m, (P.A.mulVec x) i ≤ P.b i
+
+/-- The LP is feasible if there exists a feasible solution -/
+def isFeasible (P : InequalityForm m n) : Prop := ∃ x, P.feasible x
+
+end InequalityForm
+
+-- Backwards compatibility aliases
+@[deprecated StandardForm (since := "2024-01-01")]
+abbrev StandardFormEq := StandardForm
+
+@[deprecated InequalityForm (since := "2024-01-01")]
+abbrev LPProblem := InequalityForm
+
 end
