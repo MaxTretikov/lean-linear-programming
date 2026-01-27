@@ -14,5 +14,9 @@ name = "mathlib"
 scope = "leanprover-community"
 rev = "v4.27.0"
 
+[[require]]
+name = "LinearAlgebraHelpers"
+path = "https://github.com/MaxTretikov/lean-linear-algebra-helpers.git"
+
 [[lean_lib]]
 name = "LinearProgramming"

@@ -7,8 +7,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Basic definitions for linear programs: vectors, matrices, standard form, and general form.
 -/
 
-import Mathlib.Analysis.InnerProductSpace.PiL2
-import Mathlib.Data.Matrix.Basic
+import LinearAlgebraHelpers.Defs
 import Mathlib.Data.Real.Basic
 import Mathlib.LinearAlgebra.Matrix.ToLin
 import Mathlib.Tactic
@@ -18,16 +17,7 @@ noncomputable section
 open scoped Matrix RealInnerProductSpace
 open Finset Matrix
 
-/-! ## Type aliases -/
-
-/-- Vector type as EuclideanSpace -/
-abbrev Vec (n : ℕ) := EuclideanSpace ℝ (Fin n)
-
-/-- Matrix type -/
-abbrev Mat (m n : ℕ) := Matrix (Fin m) (Fin n) ℝ
-
-/-- The nonnegative orthant: all coordinates ≥ 0 -/
-def nonnegOrthant (n : ℕ) : Set (Vec n) := { x | ∀ i, 0 ≤ x i }
+-- Vec, Mat, nonnegOrthant are imported from LinearAlgebraHelpers.Defs
 
 /-! ## Sign Constraints and Optimization Direction -/
 
@@ -258,12 +248,5 @@ def feasible (P : InequalityForm m n) (x : Vec n) : Prop :=
 def isFeasible (P : InequalityForm m n) : Prop := ∃ x, P.feasible x
 
 end InequalityForm
-
--- Backwards compatibility aliases
-@[deprecated StandardForm (since := "2024-01-01")]
-abbrev StandardFormEq := StandardForm
-
-@[deprecated InequalityForm (since := "2024-01-01")]
-abbrev LPProblem := InequalityForm
 
 end
