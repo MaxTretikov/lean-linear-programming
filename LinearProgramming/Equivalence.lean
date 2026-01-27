@@ -140,9 +140,9 @@ private lemma sum_fin_add {β : Type*} [AddCommMonoid β] {n m : ℕ} (f : Fin (
   calc
     ∑ i : Fin (n + m), f i
         = ∑ s : Fin n ⊕ Fin m, f (e s) := by
-            simpa using (Equiv.sum_comp (e := e) (g := f)).symm
+            exact (Equiv.sum_comp (e := e) (g := f)).symm
     _ = (∑ i : Fin n, f (e (Sum.inl i))) + (∑ j : Fin m, f (e (Sum.inr j))) := by
-          simpa using (Fintype.sum_sum_type (f := fun s : Fin n ⊕ Fin m => f (e s)))
+          exact Fintype.sum_sum_type (f := fun s : Fin n ⊕ Fin m => f (e s))
     _ = (∑ i : Fin n, f (Fin.castAdd m i)) + (∑ j : Fin m, f (Fin.natAdd n j)) := by
           simp [e, finSumEquiv]
 
@@ -155,7 +155,7 @@ private lemma mulVec_pos_neg_decomp {m n : ℕ} (A : Mat m n) (x : Vec n) (i : F
     intro j
     have hx := max_pos_sub_max_neg (x j)
     calc
-      A i j * x j = A i j * (max (x j) 0 - max (-x j) 0) := by simpa [hx]
+      A i j * x j = A i j * (max (x j) 0 - max (-x j) 0) := by simp [hx]
       _ = A i j * max (x j) 0 - A i j * max (-x j) 0 := by ring
       _ = A i j * max (x j) 0 + (-A i j) * max (-x j) 0 := by ring
   calc
@@ -206,16 +206,16 @@ private lemma augmentedMatrix_mulVec_split {m n : ℕ} (A : Mat m n) (y : Vec (2
   have hleft : (∑ j : Fin n, f (e.symm (Fin.castAdd (n + m) j))) =
         ∑ j : Fin n, A i j * y (e.symm (Fin.castAdd (n + m) j)) := by
     refine Finset.sum_congr rfl ?_; intro j _hj
-    have hj : (e.symm (Fin.castAdd (n + m) j)).val < n := by simpa [e] using j.isLt
-    simp [f, augmentedMatrix, hj, e]
+    have hj : (e.symm (Fin.castAdd (n + m) j)).val < n := by simp [e]
+    simp [f, augmentedMatrix, e]
   have hmid : (∑ j : Fin n, f (e.symm (Fin.natAdd n (Fin.castAdd m j)))) =
         ∑ j : Fin n, (-A i j) * y (e.symm (Fin.natAdd n (Fin.castAdd m j))) := by
     refine Finset.sum_congr rfl ?_; intro j _hj
     have idx_val : (e.symm (Fin.natAdd n (Fin.castAdd m j))).val = n + j.val := by simp [e]
     have h1 : ¬ n + j.val < n := by omega
     have h2 : n + j.val < 2 * n := by have hj' : j.val < n := j.isLt; omega
-    have hsub : n + j.val - n = j.val := by simp [Nat.add_sub_cancel_left]
-    simp [f, augmentedMatrix, idx_val, h1, h2, hsub, e]
+    have hsub : n + j.val - n = j.val := by simp
+    simp [f, augmentedMatrix, h1, h2, hsub, e]
   have hright : (∑ j : Fin m, f (e.symm (Fin.natAdd n (Fin.natAdd n j)))) =
         y (e.symm (Fin.natAdd n (Fin.natAdd n i))) := by
     classical
@@ -227,11 +227,11 @@ private lemma augmentedMatrix_mulVec_split {m n : ℕ} (A : Mat m n) (y : Vec (2
       have h1 : ¬ n + (n + j.val) < n := by omega
       have h2 : ¬ n + (n + j.val) < 2 * n := by omega
       have hval : n + (n + j.val) - 2 * n = j.val := by
-        simp [two_mul, add_assoc, Nat.add_sub_add_left, Nat.add_sub_cancel_left]
+        simp [two_mul, Nat.add_sub_add_left]
       by_cases hji : j = i
-      · subst hji; simp [f, augmentedMatrix, idx_val, h1, h2, hval, e]
+      · subst hji; simp [f, augmentedMatrix, h1, h2, hval, e]
       · have hji' : j.val ≠ i.val := fun hval_eq => hji (Fin.ext hval_eq)
-        simp [f, augmentedMatrix, idx_val, h1, h2, hval, Fin.ext_iff, hji', hji, e]
+        simp [f, augmentedMatrix, h1, h2, hval, hji', hji, e]
     calc (∑ j : Fin m, f (e.symm (Fin.natAdd n (Fin.natAdd n j))))
         = ∑ j : Fin m, (if j = i then y (e.symm (Fin.natAdd n (Fin.natAdd n i))) else 0) := by
             refine Finset.sum_congr rfl ?_; intro j _hj; exact hterm j
@@ -242,11 +242,11 @@ private lemma augmentedMatrix_mulVec_split {m n : ℕ} (A : Mat m n) (y : Vec (2
         (∑ j : Fin (n + m), f (e.symm (Fin.natAdd n j))) := hsum1
     _ = (∑ j : Fin n, f (e.symm (Fin.castAdd (n + m) j))) +
         ((∑ j : Fin n, f (e.symm (Fin.natAdd n (Fin.castAdd m j)))) +
-         (∑ j : Fin m, f (e.symm (Fin.natAdd n (Fin.natAdd n j))))) := by simp [hsum2, add_assoc]
+         (∑ j : Fin m, f (e.symm (Fin.natAdd n (Fin.natAdd n j))))) := by simp [hsum2]
     _ = (∑ j : Fin n, A i j * y (e.symm (Fin.castAdd (n + m) j))) +
         ((∑ j : Fin n, (-A i j) * y (e.symm (Fin.natAdd n (Fin.castAdd m j)))) +
          y (e.symm (Fin.natAdd n (Fin.natAdd n i)))) := by rw [hleft, hmid, hright]
-    _ = _ := by simp [add_assoc]
+    _ = _ := by ring
 
 /-! ## Main reduction theorems -/
 
@@ -272,16 +272,16 @@ theorem reduction_forward {m n : ℕ} (P : InequalityForm m n) (x : Vec n) :
         have idx_val : (e.symm (Fin.castAdd (n + m) j)).val = j.val := by simp [e]
         have hj : j.val < n := j.isLt
         have hfin : (⟨j.val, hj⟩ : Fin n) = j := by ext; rfl
-        simp [constructY, idx_val, hj, hfin, e]
+        simp [constructY, hj, hfin, e]
       have hnat : ∀ j : Fin n,
           (constructY P x).ofLp (e.symm (Fin.natAdd n (Fin.castAdd m j))) = max (-x.ofLp j) 0 := by
         intro j
         have idx_val : (e.symm (Fin.natAdd n (Fin.castAdd m j))).val = n + j.val := by simp [e]
         have h1 : ¬ n + j.val < n := by omega
         have h2 : n + j.val < 2 * n := by have hj' : j.val < n := j.isLt; omega
-        have hsub : n + j.val - n = j.val := by simp [Nat.add_sub_cancel_left]
+        have hsub : n + j.val - n = j.val := by simp
         have hfin : (⟨j.val, j.isLt⟩ : Fin n) = j := by ext; rfl
-        simp [constructY, idx_val, h1, h2, hsub, hfin, e]
+        simp [constructY, h1, h2, hsub, hfin, e]
       have hslack :
           (constructY P x).ofLp (e.symm (Fin.natAdd n (Fin.natAdd n i))) =
             P.b i - (P.A *ᵥ x.ofLp) i := by
@@ -289,28 +289,34 @@ theorem reduction_forward {m n : ℕ} (P : InequalityForm m n) (x : Vec n) :
         have h1 : ¬ n + (n + i.val) < n := by omega
         have h2 : ¬ n + (n + i.val) < 2 * n := by omega
         have hsub : n + (n + i.val) - 2 * n = i.val := by
-          simp [two_mul, add_assoc, Nat.add_sub_add_left, Nat.add_sub_cancel_left]
+          simp [two_mul, Nat.add_sub_add_left]
         have hfin : (⟨i.val, i.isLt⟩ : Fin m) = i := by ext; rfl
-        simp [constructY, idx_val, h1, h2, hsub, hfin, e]
+        simp [constructY, h1, h2, hsub, hfin, e]
       have hsplit :
           (augmentedMatrix P.A).mulVec (constructY P x) i =
-            (∑ j : Fin n, P.A i j * (constructY P x).ofLp (e.symm (Fin.castAdd (n + m) j))) +
-            (∑ j : Fin n, (-P.A i j) * (constructY P x).ofLp (e.symm (Fin.natAdd n (Fin.castAdd m j)))) +
+            (∑ j : Fin n, P.A i j *
+              (constructY P x).ofLp (e.symm (Fin.castAdd (n + m) j))) +
+            (∑ j : Fin n, (-P.A i j) *
+              (constructY P x).ofLp (e.symm (Fin.natAdd n (Fin.castAdd m j)))) +
             (constructY P x).ofLp (e.symm (Fin.natAdd n (Fin.natAdd n i))) := by
         simpa [e] using (augmentedMatrix_mulVec_split (A := P.A) (y := constructY P x) i)
       have hsum1 :
-          (∑ j : Fin n, P.A i j * (constructY P x).ofLp (e.symm (Fin.castAdd (n + m) j))) =
+          (∑ j : Fin n, P.A i j *
+            (constructY P x).ofLp (e.symm (Fin.castAdd (n + m) j))) =
             ∑ j : Fin n, P.A i j * max (x.ofLp j) 0 := by
         refine Finset.sum_congr rfl ?_; intro j _hj
         simpa using congrArg (fun t => P.A i j * t) (hcast j)
       have hsum2 :
-          (∑ j : Fin n, (-P.A i j) * (constructY P x).ofLp (e.symm (Fin.natAdd n (Fin.castAdd m j)))) =
+          (∑ j : Fin n, (-P.A i j) *
+            (constructY P x).ofLp (e.symm (Fin.natAdd n (Fin.castAdd m j)))) =
             ∑ j : Fin n, (-P.A i j) * max (-x.ofLp j) 0 := by
         refine Finset.sum_congr rfl ?_; intro j _hj
         simpa using congrArg (fun t => (-P.A i j) * t) (hnat j)
       calc (augmentedMatrix P.A).mulVec (constructY P x) i
-          = (∑ j : Fin n, P.A i j * (constructY P x).ofLp (e.symm (Fin.castAdd (n + m) j))) +
-            (∑ j : Fin n, (-P.A i j) * (constructY P x).ofLp (e.symm (Fin.natAdd n (Fin.castAdd m j)))) +
+          = (∑ j : Fin n, P.A i j *
+              (constructY P x).ofLp (e.symm (Fin.castAdd (n + m) j))) +
+            (∑ j : Fin n, (-P.A i j) *
+              (constructY P x).ofLp (e.symm (Fin.natAdd n (Fin.castAdd m j)))) +
             (constructY P x).ofLp (e.symm (Fin.natAdd n (Fin.natAdd n i))) := hsplit
         _ = (∑ j : Fin n, P.A i j * max (x.ofLp j) 0) +
             (∑ j : Fin n, (-P.A i j) * max (-x.ofLp j) 0) +
@@ -332,15 +338,18 @@ theorem reduction_forward {m n : ℕ} (P : InequalityForm m n) (x : Vec n) :
     intro j
     by_cases h1 : j.val < n
     · have hpos : 0 ≤ max (x ⟨j.val, h1⟩) 0 := le_max_right _ _
-      simpa [h1] using hpos
+      simp only [constructY_apply, h1, ↓reduceDIte]
+      exact hpos
     · by_cases h2 : j.val < 2 * n
       · have hpos : 0 ≤ max (-x ⟨j.val - n, by omega⟩) 0 := le_max_right _ _
-        simpa [h1, h2] using hpos
+        simp only [constructY_apply, h1, ↓reduceDIte, h2]
+        exact hpos
       · have hslack : 0 ≤ P.b ⟨j.val - 2 * n, by omega⟩ -
             (P.A.mulVec x) ⟨j.val - 2 * n, by omega⟩ := by
           have hxj := hx ⟨j.val - 2 * n, by omega⟩
           linarith
-        simpa [h1, h2] using hslack
+        simp only [constructY_apply, h1, ↓reduceDIte, h2]
+        exact hslack
 
 /-- Backward direction: if y is feasible for By = c, then extractX y is feasible for Ax ≤ b -/
 theorem reduction_backward {m n : ℕ} (P : InequalityForm m n) (y : Vec (2 * n + m)) :
@@ -364,7 +373,7 @@ theorem reduction_backward {m n : ℕ} (P : InequalityForm m n) (y : Vec (2 * n 
       refine Finset.sum_congr rfl ?_; intro j _hj
       have idx_val : (e.symm (Fin.castAdd (n + m) j)).val = j.val := by simp [e]
       have hfin : e.symm (Fin.castAdd (n + m) j) = ⟨j.val, by omega⟩ := by
-        apply Fin.ext; simpa [idx_val]
+        apply Fin.ext; simp [idx_val]
       simp [hfin]
     have hmid :
         (∑ j : Fin n, (-P.A i j) * y (e.symm (Fin.natAdd n (Fin.castAdd m j)))) =
@@ -372,7 +381,7 @@ theorem reduction_backward {m n : ℕ} (P : InequalityForm m n) (y : Vec (2 * n 
       refine Finset.sum_congr rfl ?_; intro j _hj
       have idx_val : (e.symm (Fin.natAdd n (Fin.castAdd m j))).val = n + j.val := by simp [e]
       have hfin : e.symm (Fin.natAdd n (Fin.castAdd m j)) = ⟨n + j.val, by omega⟩ := by
-        apply Fin.ext; simpa [idx_val]
+        apply Fin.ext; simp [idx_val]
       simp [hfin]
     have hright :
         y (e.symm (Fin.natAdd n (Fin.natAdd n i))) = y ⟨2 * n + i.val, by omega⟩ := by
