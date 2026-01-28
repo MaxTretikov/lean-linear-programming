@@ -18,11 +18,10 @@ This file re-exports all LP-related definitions and theorems.
 
 ## Reduction to Reduced Form
 
-* `ReducedForm` - LP in reduced form after Gaussian elimination
+* `ReducedForm` - LP in reduced form after row reduction
 * `ReducedForm.feasible` - Feasibility predicate for reduced form
 * `fullRowRank` - Full row rank predicate for matrices
-* `gaussianElimination` - Abstract Gaussian elimination algorithm
-* `phase1Reduction` - Phase 1 reduction with infeasibility detection
+* `rowReduceStandardForm` - Row-reduces Standard Form LP to Reduced Form
 * `fullReduction` - Full reduction from inequality form to reduced form
 * `fullReduction_correct` - Correctness theorem for the full reduction
 -/
@@ -34,5 +33,4 @@ import LinearProgramming.NonnegConstraint
 import LinearProgramming.Equivalence
 import LinearProgramming.ReducedForm
 import LinearProgramming.RowOperations
-import LinearProgramming.GaussianElimination
 import LinearProgramming.Reduction

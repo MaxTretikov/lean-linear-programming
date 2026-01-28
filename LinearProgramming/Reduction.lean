@@ -2,139 +2,150 @@
 Copyright (c) 2024. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 
-# Phase 1 LP Reduction
+# LP Reduction Pipeline
 
-This module provides the LP-specific Phase 1 reduction algorithm that uses Gaussian
-elimination to transform inequality-form LPs into reduced form and check for infeasibility.
-
-## Overview
-
-The Phase 1 reduction performs two steps:
-
-1. **Convert to Standard Form**: Transform `Ax ≤ b` into `By = c, y ≥ 0` using
-   slack variables and variable decomposition (via `toStandardForm`)
-
-2. **Apply Gaussian Elimination**: Transform to reduced form where `c = (0,...,0,c_m)`
-
-The algorithm can detect infeasibility: if `c_m = 0` and the reduced matrix has
-full row rank, then the only solution is `y = 0`, which is infeasible when `c ≠ 0`.
+This module provides the complete reduction from Inequality Form LPs to Reduced Form,
+including the row reduction algorithm that transforms Standard Form to Reduced Form.
 
 ## Main Definitions
 
-- `Phase1Result`: Either `infeasible` or `reduced R` with the reduced form
-- `phase1Reduction`: The main Phase 1 algorithm for Standard Form
-- `phase1ReductionLP`: Wrapper for Inequality Form LPs
-- `fullReduction`: Direct reduction without infeasibility check
-- `fullReduction_correct`: Correctness theorem for the full reduction
-
-## Re-exports
-
-This module re-exports key definitions from the reduction pipeline for convenience:
-- `InequalityForm.feasible`, `InequalityForm.isFeasible`
-- `StandardForm.feasible`, `StandardForm.isFeasible`
-- `ReducedForm`, `ReducedForm.feasible`, `fullRowRank`
+- `rowReduceStandardForm`: Row-reduces a Standard Form LP to Reduced Form
+- `rowReduceStandardForm_correct`: Proves feasibility equivalence for Standard Form
+- `fullReduction`: Complete reduction from Inequality Form to Reduced Form
+- `fullReduction_correct`: Proves feasibility equivalence for the full pipeline
 
 -/
 
-import LinearProgramming.GaussianElimination
+import LinearProgramming.RowOperations
 import LinearProgramming.Equivalence
 
 noncomputable section
 
 open Matrix
 
--- Re-export definitions from LinearProgramming for convenience
+-- Re-export definitions for convenience
 export InequalityForm (feasible isFeasible)
 export StandardForm (feasible isFeasible)
 
--- Alias for the conversion function (backwards compatibility)
-abbrev toInitialStandardForm {m n : ℕ} (P : InequalityForm m n) : StandardForm m (2 * n + m) :=
-  toStandardForm P
-
-/-! ## Phase 1 Result Type -/
-
-/-- Phase 1 output: either infeasible or a reduced form `B, c_m`.
-
-- `infeasible`: The LP has no feasible solution (detected via rank condition)
-- `reduced R`: The LP has been reduced to form `R`, feasibility still needs checking -/
-inductive Phase1Result (m p : ℕ) where
-  | infeasible
-  | reduced (R : ReducedForm m p)
-
-/-! ## Phase 1 Reduction Algorithm -/
+/-! ## Row Reduction for Standard Form LPs -/
 
 /--
-Phase 1 as stated in the paper: apply Gaussian elimination, then check whether
-`c_m = 0` and `B` has full row rank. If so, return infeasible; otherwise return
-the reduced form.
+Row-reduce a Standard Form LP to Reduced Form.
 
-**Infeasibility criterion**: When `c_m = 0` and the reduced matrix has full row rank,
-the system `By = 0, y ≥ 0` has only the trivial solution `y = 0`. But if the original
-`c ≠ 0`, this means the original system `By = c` has no nonnegative solution.
+Given a Standard Form LP with `By = c, y ≥ 0`, this constructs a `RowReduction` containing
+an invertible matrix `P` such that `P * c = (0, ..., 0, c_m)`.
+
+**Algorithm**:
+- If `c = 0`: Use identity matrix, `c_m = 0`
+- If `c ≠ 0`: Build a basis with `c` at the last position, use change-of-basis matrix, `c_m = 1`
 -/
-def phase1Reduction {m p : ℕ} (S : StandardForm m p) (hm : m > 0) :
-    Phase1Result m p := by
+def rowReduceStandardForm {m p : ℕ} (S : StandardForm m p) (hm : m > 0) :
+    RowReduction m p S hm := by
   classical
-  let R := (gaussianElimination S hm).toReducedForm
-  by_cases h : R.c_m = 0 ∧ fullRowRank R.B
-  · exact Phase1Result.infeasible
-  · exact Phase1Result.reduced R
+  -- Handle the trivial right-hand side separately.
+  by_cases hc : S.c = 0
+  ·
+    refine
+      { P := 1
+        P_inv := 1
+        P_mul_Pinv := by simp
+        Pinv_mul_P := by simp
+        c_m := 0
+        c_eq := by
+          have h : (1 : Mat m m).mulVec S.c = S.c := by
+            simpa using (Matrix.one_mulVec S.c)
+          simpa [hc, cVec_zero] using h }
+  ·
+    -- Nontrivial right-hand side: build a row-equivalent system with `c = (0,…,0,1)`.
+    have hb_ex : ∃ b : Module.Basis (Fin m) ℝ (Vec m), b (lastRow m hm) = S.c :=
+      exists_basis_with_last (m := m) hm S.c hc
+    let b : Module.Basis (Fin m) ℝ (Vec m) := Classical.choose hb_ex
+    have hb : b (lastRow m hm) = S.c := Classical.choose_spec hb_ex
+    let e := (EuclideanSpace.equiv (𝕜 := ℝ) (ι := Fin m)).toLinearEquiv
+    let φ : Vec m ≃ₗ[ℝ] Vec m := b.equivFun.trans e.symm
+    have hφc : φ S.c = cVec m hm 1 := by
+      -- `b` sends `lastRow` to `S.c`, so `b.equivFun` sends `S.c` to the last basis vector.
+      have hbfun :
+          b.equivFun S.c = (fun i => if i = lastRow m hm then (1 : ℝ) else 0) := by
+        ext i
+        -- rewrite `S.c` as `b (lastRow ...)`
+        simpa [hb, eq_comm] using (b.equivFun_self (i := lastRow m hm) (j := i))
+      simp [φ, cVec, hbfun, e, EuclideanSpace.equiv, WithLp.coe_symm_linearEquiv]
+    let v := (EuclideanSpace.basisFun (Fin m) ℝ).toBasis
+    let P : Mat m m := LinearMap.toMatrix v v φ.toLinearMap
+    let P_inv : Mat m m := LinearMap.toMatrix v v φ.symm.toLinearMap
+    have hPPinv : P * P_inv = 1 := by
+      have hcomp :
+          φ.toLinearMap.comp φ.symm.toLinearMap =
+            (LinearMap.id : Vec m →ₗ[ℝ] Vec m) := by
+        ext x; simp
+      have hmat :
+          LinearMap.toMatrix v v (φ.toLinearMap.comp φ.symm.toLinearMap) =
+            P * P_inv := by
+        simpa [P, P_inv] using
+          (LinearMap.toMatrix_comp (v₁ := v) (v₂ := v) (v₃ := v)
+            (φ.toLinearMap) (φ.symm.toLinearMap))
+      calc
+        P * P_inv = LinearMap.toMatrix v v (φ.toLinearMap.comp φ.symm.toLinearMap) := hmat.symm
+        _ = LinearMap.toMatrix v v (LinearMap.id : Vec m →ₗ[ℝ] Vec m) := by
+          simpa [hcomp]
+        _ = 1 := LinearMap.toMatrix_id (v₁ := v)
+    have hPinvP : P_inv * P = 1 := by
+      have hcomp :
+          φ.symm.toLinearMap.comp φ.toLinearMap =
+            (LinearMap.id : Vec m →ₗ[ℝ] Vec m) := by
+        ext x; simp
+      have hmat :
+          LinearMap.toMatrix v v (φ.symm.toLinearMap.comp φ.toLinearMap) =
+            P_inv * P := by
+        simpa [P, P_inv] using
+          (LinearMap.toMatrix_comp (v₁ := v) (v₂ := v) (v₃ := v)
+            (φ.symm.toLinearMap) (φ.toLinearMap))
+      calc
+        P_inv * P = LinearMap.toMatrix v v (φ.symm.toLinearMap.comp φ.toLinearMap) := hmat.symm
+        _ = LinearMap.toMatrix v v (LinearMap.id : Vec m →ₗ[ℝ] Vec m) := by
+          simpa [hcomp]
+        _ = 1 := LinearMap.toMatrix_id (v₁ := v)
+    have hPmul : P.mulVec S.c = φ S.c := by
+      simpa [P] using (toMatrix_mulVec_basisFun (f := φ.toLinearMap) (x := S.c))
+    have hφc_fun : (φ S.c : Fin m → ℝ) = (cVec m hm 1 : Fin m → ℝ) := by
+      funext i
+      have h := congrArg (fun v => v i) hφc
+      simpa using h
+    have hceq : P.mulVec S.c = cVec m hm 1 := by
+      calc
+        P.mulVec S.c = (φ S.c : Fin m → ℝ) := hPmul
+        _ = (cVec m hm 1 : Fin m → ℝ) := hφc_fun
+    exact
+      { P := P
+        P_inv := P_inv
+        P_mul_Pinv := hPPinv
+        Pinv_mul_P := hPinvP
+        c_m := 1
+        c_eq := hceq }
 
-/-- When Phase 1 returns a reduced form, feasibility of the original LP is equivalent
-    to feasibility of the reduced form. -/
-theorem phase1Reduction_reduced_correct {m p : ℕ} (S : StandardForm m p) (hm : m > 0) :
-    match phase1Reduction S hm with
-    | Phase1Result.infeasible => True
-    | Phase1Result.reduced R => S.isFeasible ↔ ∃ y, R.feasible hm y := by
-  classical
-  unfold phase1Reduction
-  -- The reduced branch uses the Gaussian-elimination reduced form.
-  by_cases h : ((gaussianElimination S hm).toReducedForm).c_m = 0 ∧
-      fullRowRank ((gaussianElimination S hm).toReducedForm).B
-  · simp [h]
-  · simpa [h] using (gaussianElimination_correct S hm)
+/-- Row reduction preserves feasibility: the original Standard Form LP is feasible
+    if and only if the resulting Reduced Form LP is feasible. -/
+theorem rowReduceStandardForm_correct {m p : ℕ} (S : StandardForm m p) (hm : m > 0) :
+    S.isFeasible ↔ ∃ y, (rowReduceStandardForm S hm).toReducedForm.feasible hm y := by
+  let RR := rowReduceStandardForm S hm
+  constructor
+  · intro hS
+    rcases hS with ⟨y, hy⟩
+    exact ⟨y, (RowReduction.feasible_iff (RR := RR) (y := y)).1 hy⟩
+  · intro hR
+    rcases hR with ⟨y, hy⟩
+    exact ⟨y, (RowReduction.feasible_iff (RR := RR) (y := y)).2 hy⟩
 
-/-- When the original RHS is nonzero, Phase 1 never returns `infeasible`.
+/-! ## Full Reduction Pipeline -/
 
-This is because Gaussian elimination transforms nonzero `c` to `(0,...,0,1)` with `c_m = 1 ≠ 0`,
-so the infeasibility criterion `c_m = 0 ∧ fullRowRank` cannot be satisfied. -/
-theorem phase1Reduction_not_infeasible_of_c_ne_zero {m p : ℕ}
-    (S : StandardForm m p) (hm : m > 0) (hc : S.c ≠ 0) :
-    phase1Reduction S hm ≠ Phase1Result.infeasible := by
-  classical
-  -- In the `S.c ≠ 0` branch, Gaussian elimination sets `c_m = 1`,
-  -- so the infeasible guard cannot trigger.
-  unfold phase1Reduction
-  let R := (gaussianElimination S hm).toReducedForm
-  have hcm' : R.c_m = 1 := by
-    -- `gaussianElimination` uses the nonzero branch and sets `c_m = 1`.
-    have hcm' : (gaussianElimination S hm).c_m = 1 := by
-      by_cases hc0 : S.c = 0
-      · exact (hc hc0).elim
-      · simp [gaussianElimination, hc0]
-    simpa [R, RowReduction.toReducedForm] using hcm'
-  have hcm : R.c_m ≠ 0 := by
-    simpa [hcm']
-  have h' : ¬ (R.c_m = 0 ∧ fullRowRank R.B) := by
-    intro h
-    exact hcm h.1
-  simpa [phase1Reduction, R, h']
+/-- Full reduction from Inequality Form to Reduced Form.
 
-/-! ## Convenience Functions -/
-
-/-- Phase 1 reduction starting from an Inequality Form LP `Ax ≤ b`.
-
-First converts to Standard Form, then applies Phase 1 reduction. -/
-def phase1ReductionLP {m n : ℕ} (P : InequalityForm m n) (hm : m > 0) :
-    Phase1Result m (2 * n + m) :=
-  phase1Reduction (toStandardForm P) hm
-
-/-- Full reduction from Inequality Form to Reduced Form, bypassing the infeasibility check.
-
-This directly applies Gaussian elimination without checking the `c_m = 0 ∧ fullRowRank`
-condition. Use this when you want the reduced form regardless of potential infeasibility. -/
+This applies the complete reduction pipeline:
+1. Convert `Ax ≤ b` to Standard Form `By = c, y ≥ 0` using slack variables
+2. Apply row reduction to get Reduced Form with `c = (0,...,0,c_m)` -/
 def fullReduction {m n : ℕ} (P : InequalityForm m n) (hm : m > 0) : ReducedForm m (2 * n + m) :=
-  (gaussianElimination (toStandardForm P) hm).toReducedForm
+  (rowReduceStandardForm (toStandardForm P) hm).toReducedForm
 
 /-- The full reduction preserves feasibility: the original Inequality Form LP is feasible
     if and only if the resulting Reduced Form LP is feasible. -/
@@ -143,6 +154,6 @@ theorem fullReduction_correct {m n : ℕ} (P : InequalityForm m n) (hm : m > 0) 
   calc P.isFeasible
       ↔ (toStandardForm P).isFeasible := reduction_correct P
     _ ↔ ∃ y, (fullReduction P hm).feasible hm y :=
-        (gaussianElimination_correct (toStandardForm P) hm)
+        (rowReduceStandardForm_correct (toStandardForm P) hm)
 
 end
