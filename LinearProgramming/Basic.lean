@@ -15,6 +15,16 @@ This file re-exports all LP-related definitions and theorems.
 * `eqToLeq_optimal_iff` - Step 3: Converting = to ≤ constraints
 * `free_decomposition` - Step 4: Making variables nonnegative
 * `general_to_standard_form_equivalence` - Full equivalence theorem
+
+## Reduction to Reduced Form
+
+* `ReducedForm` - LP in reduced form after Gaussian elimination
+* `ReducedForm.feasible` - Feasibility predicate for reduced form
+* `fullRowRank` - Full row rank predicate for matrices
+* `gaussianElimination` - Abstract Gaussian elimination algorithm
+* `phase1Reduction` - Phase 1 reduction with infeasibility detection
+* `fullReduction` - Full reduction from inequality form to reduced form
+* `fullReduction_correct` - Correctness theorem for the full reduction
 -/
 
 import LinearProgramming.Defs
@@ -22,3 +32,7 @@ import LinearProgramming.MinToMax
 import LinearProgramming.SwapInequalities
 import LinearProgramming.NonnegConstraint
 import LinearProgramming.Equivalence
+import LinearProgramming.ReducedForm
+import LinearProgramming.RowOperations
+import LinearProgramming.GaussianElimination
+import LinearProgramming.Reduction
