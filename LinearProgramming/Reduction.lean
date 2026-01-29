@@ -156,4 +156,16 @@ theorem fullReduction_correct {m n : ℕ} (P : InequalityForm m n) (hm : m > 0) 
     _ ↔ ∃ y, (fullReduction P hm).feasible hm y :=
         (rowReduceStandardForm_correct (toStandardForm P) hm)
 
+/-! ## Solution Recovery from Reduced Form -/
+
+/-- If `y` is feasible for the reduced form of `P`, then `extractX y` is feasible for `P`. -/
+theorem fullReduction_extractX_feasible {m n : ℕ} (P : InequalityForm m n) (hm : m > 0)
+    {y : Vec (2 * n + m)} :
+    (fullReduction P hm).feasible hm y → P.feasible (extractX y) := by
+  intro hy
+  let S := toStandardForm P
+  let RR := rowReduceStandardForm S hm
+  have hyS : S.feasible y := (RowReduction.feasible_iff (RR := RR) (y := y)).2 hy
+  exact reduction_backward (P := P) (y := y) hyS
+
 end
