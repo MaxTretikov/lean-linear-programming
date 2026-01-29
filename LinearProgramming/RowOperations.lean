@@ -73,24 +73,6 @@ def toReducedForm (RR : RowReduction m p S hm) : ReducedForm m p :=
 private lemma P_isUnit (RR : RowReduction m p S hm) : IsUnit RR.P := by
   refine ⟨⟨RR.P, RR.P_inv, RR.P_mul_Pinv, RR.Pinv_mul_P⟩, rfl⟩
 
-private lemma mulVec_left_inv (RR : RowReduction m p S hm) (x : Vec m) :
-    RR.P_inv.mulVec (RR.P.mulVec x) = x := by
-  calc
-    RR.P_inv.mulVec (RR.P.mulVec x) =
-        (RR.P_inv * RR.P).mulVec x := by
-          simpa using (Matrix.mulVec_mulVec RR.P_inv RR.P x).symm
-    _ = (1 : Mat m m).mulVec x := by simp [RR.Pinv_mul_P]
-    _ = x := by simpa using (Matrix.one_mulVec x)
-
-private lemma mulVec_right_inv (RR : RowReduction m p S hm) (x : Vec m) :
-    RR.P.mulVec (RR.P_inv.mulVec x) = x := by
-  calc
-    RR.P.mulVec (RR.P_inv.mulVec x) =
-        (RR.P * RR.P_inv).mulVec x := by
-          simpa using (Matrix.mulVec_mulVec RR.P RR.P_inv x).symm
-    _ = (1 : Mat m m).mulVec x := by simp [RR.P_mul_Pinv]
-    _ = x := by simpa using (Matrix.one_mulVec x)
-
 /-! ## Feasibility Equivalence -/
 
 private lemma reducedForm_mulVec_eq (R : ReducedForm m p) (hm : m > 0) (y : Vec p) :
@@ -300,23 +282,3 @@ theorem fullRowRank_iff (RR : RowReduction m p S hm) :
     exact (fullRowRank_iff_vecMul_injective (B := RR.B)).2 hinj
 
 end RowReduction
-
-/-! ## Matrix-Linear Map Conversion Lemmas -/
-
-private lemma toEuclideanLin_mulVec {m p : ℕ} (B : Mat m p) (y : Vec p) :
-    Matrix.toEuclideanLin B y = WithLp.toLp _ (B *ᵥ y.ofLp) := by
-  simpa using (Matrix.toEuclideanLin_apply (M := B) (v := y))
-
-lemma toMatrix_mulVec_basisFun {m : ℕ} (f : Vec m →ₗ[ℝ] Vec m) (x : Vec m) :
-    (LinearMap.toMatrix (EuclideanSpace.basisFun (Fin m) ℝ).toBasis
-        (EuclideanSpace.basisFun (Fin m) ℝ).toBasis f).mulVec x = f x := by
-  classical
-  ext i
-  have h :=
-    (LinearMap.toMatrix_mulVec_repr
-      (v₁ := (EuclideanSpace.basisFun (Fin m) ℝ).toBasis)
-      (v₂ := (EuclideanSpace.basisFun (Fin m) ℝ).toBasis) f x)
-  have h' := congrArg (fun v => v i) h
-  simpa [Matrix.mulVec, EuclideanSpace.basisFun_repr, PiLp.toLp_apply] using h'
-
-end
