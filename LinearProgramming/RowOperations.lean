@@ -28,7 +28,7 @@ the resulting Reduced Form.
 
 -/
 
-import LinearProgramming.ReducedForm
+import LinearProgramming.Defs
 import Mathlib.LinearAlgebra.Matrix.ToLin
 
 noncomputable section

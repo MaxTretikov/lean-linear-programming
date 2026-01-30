@@ -31,6 +31,7 @@ import LinearProgramming.MinToMax
 import LinearProgramming.SwapInequalities
 import LinearProgramming.NonnegConstraint
 import LinearProgramming.Equivalence
-import LinearProgramming.ReducedForm
 import LinearProgramming.RowOperations
 import LinearProgramming.Reduction
+import LinearProgramming.Preprocess
+import LinearProgramming.FacialReduction
